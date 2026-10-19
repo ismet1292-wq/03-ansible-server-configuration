@@ -1,20 +1,33 @@
 ---
-- name: Install Nginx on Local Machine
+- name: Configure Nginx on the local Ubuntu demonstration host
   hosts: local
   become: true
 
-  tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: yes
+  pre_tasks:
+    - name: Require a Debian-family host
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['os_family'] == 'Debian'
+        fail_msg: This playbook requires a Debian-family Linux host.
 
-    - name: Install Nginx
-      apt:
+  tasks:
+    - name: Install Nginx with a recently refreshed package cache
+      ansible.builtin.apt:
         name: nginx
         state: present
+        update_cache: true
+        cache_valid_time: 3600
 
     - name: Ensure Nginx is running
-      service:
+      ansible.builtin.service:
         name: nginx
         state: started
-        enabled: yes
+        enabled: true
+
+    - name: Verify the local HTTP endpoint
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        status_code: 200
+        return_content: false
+      become: false
+      when: not ansible_check_mode
